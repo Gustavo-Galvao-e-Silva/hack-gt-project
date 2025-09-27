@@ -33,3 +33,17 @@ CREATE TABLE public."Workspaces"
 
 ALTER TABLE IF EXISTS public."Workspaces"
     OWNER to postgres;
+
+ALTER TABLE IF EXISTS public."Node"
+    ADD CONSTRAINT "FK_to_Workspaces" FOREIGN KEY ("workspaceID")
+    REFERENCES public."Workspaces" ("workspacesID") MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public."Workspaces"
+    ADD CONSTRAINT "FK_to_Users" FOREIGN KEY ("userID")
+    REFERENCES public."Users" ("userID") MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
