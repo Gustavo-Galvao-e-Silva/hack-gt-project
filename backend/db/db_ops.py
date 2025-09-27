@@ -179,3 +179,18 @@ def update_node(conn, node_id: int, title: Optional[str] = None, description: Op
         cur.execute(query, tuple(values))
         conn.commit()
         return _row_from_cursor(cur)
+    
+def node_exists(conn, node_id: int) -> bool:
+    with conn.cursor() as cur:
+        cur.execute('SELECT * FROM "Node" WHERE "nodeID" = %s', (node_id,))
+        return cur.fetchone() is not None
+
+def node_table_size(conn) -> int:
+    """Returns the number of rows in the Node table."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT COUNT(*) FROM "Node"')
+            count = cur.fetchone()[0]
+            return count
+    finally:
+        conn.close()
