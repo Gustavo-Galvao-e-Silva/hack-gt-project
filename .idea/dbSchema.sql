@@ -21,3 +21,13 @@ CREATE TABLE public."Users"
 
 ALTER TABLE IF EXISTS public."Users"
     OWNER to postgres;
+
+CREATE TABLE public."Workspaces"
+(
+    "workspaceID" integer NOT NULL,
+    "userID" integer NOT NULL,
+    PRIMARY KEY ("workspaceID")
+);
+
+ALTER TABLE IF EXISTS public."Workspaces"
+    OWNER to postgres;
