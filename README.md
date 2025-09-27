@@ -1,4 +1,4 @@
-# NodeSurf  App (NAME TBD)
+# NodeSurf
 
 ## What it is
 
