@@ -1,7 +1,7 @@
 CREATE TABLE public."Node"
 (
     "nodeID" integer NOT NULL,
-    title text NOT NULL,
+    title text NOT NULL DEFAULT untitled,
     "connectedTitles" text[],
     description text,
     "connectedIDs" integer[],
