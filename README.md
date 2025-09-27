@@ -1,4 +1,4 @@
-# Knowledge Map  App (NAME TBD)
+# NodeSurf
 
 ## What it is
 
