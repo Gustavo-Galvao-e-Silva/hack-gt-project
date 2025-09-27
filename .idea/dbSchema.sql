@@ -1,7 +1,7 @@
 CREATE TABLE public."Node"
 (
     "nodeID" integer NOT NULL,
-    title text NOT NULL DEFAULT untitled,
+    title text NOT NULL,
     "connectedTitles" text[],
     description text,
     "connectedIDs" integer[],
@@ -26,7 +26,7 @@ CREATE TABLE public."Workspaces"
 (
     "workspacesID" integer NOT NULL,
     "userID" integer NOT NULL,
-    title text DEFAULT untitled,
+    title text,
     description text,
     PRIMARY KEY ("workspacesID")
 );
