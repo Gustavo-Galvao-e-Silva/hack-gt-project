@@ -11,3 +11,13 @@ CREATE TABLE public."Node"
 
 ALTER TABLE IF EXISTS public."Node"
     OWNER to postgres;
+
+CREATE TABLE public."Users"
+(
+    "userID" integer NOT NULL,
+    username text NOT NULL,
+    PRIMARY KEY ("userID")
+);
+
+ALTER TABLE IF EXISTS public."Users"
+    OWNER to postgres;
