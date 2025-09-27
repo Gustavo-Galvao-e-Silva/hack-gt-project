@@ -50,6 +50,31 @@ def delete_user(conn, user_id: int) -> bool:
         return deleted > 0
 
 
+def get_user(conn, user_id: int) -> Optional[Dict[str, Any]]:
+    """Fetch a user by userID. Returns dict or None."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT * FROM "Users" WHERE "userID" = %s', (user_id,))
+        return _row_from_cursor(cur)
+
+
+def update_user(conn, user_id: int, username: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Update a user's username. Returns the updated row or None if not found."""
+    # Build dynamic SET clause
+    fields = []
+    values = []
+    if username is not None:
+        fields.append('username = %s')
+        values.append(username)
+    if not fields:
+        return get_user(conn, user_id)
+    values.append(user_id)
+    query = f'UPDATE "Users" SET {", ".join(fields)} WHERE "userID" = %s RETURNING *'
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(query, tuple(values))
+        conn.commit()
+        return _row_from_cursor(cur)
+
+
 def add_workspace(conn, workspace_id: int, user_id: int, title: Optional[str] = None, description: Optional[str] = None) -> Dict[str, Any]:
     """Insert a workspace and return the new row."""
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -68,6 +93,33 @@ def delete_workspace(conn, workspace_id: int) -> bool:
         deleted = cur.rowcount
         conn.commit()
         return deleted > 0
+
+
+def get_workspace(conn, workspace_id: int) -> Optional[Dict[str, Any]]:
+    """Fetch a workspace by workspacesID. Returns dict or None."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT * FROM "Workspaces" WHERE "workspacesID" = %s', (workspace_id,))
+        return _row_from_cursor(cur)
+
+
+def update_workspace(conn, workspace_id: int, title: Optional[str] = None, description: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Update workspace title/description. Returns updated row or None if not found."""
+    fields = []
+    values = []
+    if title is not None:
+        fields.append('title = %s')
+        values.append(title)
+    if description is not None:
+        fields.append('description = %s')
+        values.append(description)
+    if not fields:
+        return get_workspace(conn, workspace_id)
+    values.append(workspace_id)
+    query = f'UPDATE "Workspaces" SET {", ".join(fields)} WHERE "workspacesID" = %s RETURNING *'
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(query, tuple(values))
+        conn.commit()
+        return _row_from_cursor(cur)
 
 
 def add_node(conn, node_id: int, title: str, workspace_id: int, description: Optional[str] = None, connected_titles: Optional[List[str]] = None, connected_ids: Optional[List[int]] = None) -> Dict[str, Any]:
@@ -94,3 +146,36 @@ def delete_node(conn, node_id: int) -> bool:
         deleted = cur.rowcount
         conn.commit()
         return deleted > 0
+
+
+def get_node(conn, node_id: int) -> Optional[Dict[str, Any]]:
+    """Fetch a node by nodeID. Returns dict or None."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT * FROM "Node" WHERE "nodeID" = %s', (node_id,))
+        return _row_from_cursor(cur)
+
+
+def update_node(conn, node_id: int, title: Optional[str] = None, description: Optional[str] = None, connected_titles: Optional[List[str]] = None, connected_ids: Optional[List[int]] = None) -> Optional[Dict[str, Any]]:
+    """Update node fields. Returns updated row or None if not found."""
+    fields = []
+    values = []
+    if title is not None:
+        fields.append('title = %s')
+        values.append(title)
+    if description is not None:
+        fields.append('description = %s')
+        values.append(description)
+    if connected_titles is not None:
+        fields.append('"connectedTitles" = %s')
+        values.append(connected_titles)
+    if connected_ids is not None:
+        fields.append('"connectedIDs" = %s')
+        values.append(connected_ids)
+    if not fields:
+        return get_node(conn, node_id)
+    values.append(node_id)
+    query = f'UPDATE "Node" SET {", ".join(fields)} WHERE "nodeID" = %s RETURNING *'
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(query, tuple(values))
+        conn.commit()
+        return _row_from_cursor(cur)
