@@ -32,10 +32,12 @@ async def extract_nodes(file: UploadFile = File(...)):
 # warning !! the code assumes that if you generate a new set of nodes, the id's still stay the same on the front end when parsing to the backend
 def upload_nodes_db(nodes):
     """Uploads most recent nodes to the database."""
-    from backend.db.db_ops import add_node, update_node, get_node, node_exists, delete_node, node_table_size
+    from backend.db.db_ops import add_node, update_node, get_node, delete_node, get_all_nodes
     from backend.db.connection import get_connection_from_env
     conn = get_connection_from_env()  # retrieves a DB connection
     try:
+        # Build a set of incoming node IDs for quick membership checks
+        incoming_ids = set()
         for node in nodes:
             node_id = node.get("nodeID")
             title = node.get("title")
@@ -43,16 +45,42 @@ def upload_nodes_db(nodes):
             connected_titles = node.get("connectedTitles")
             connected_ids = node.get("connectedIDs")
             workspace_id = node.get("workspaceID")
+
+            if node_id is None:
+                # skip malformed node entries
+                continue
+
+            incoming_ids.add(node_id)
+
             # if Node ID does not exist, create it, otherwise update it
             if get_node(conn, node_id) is None:
                 add_node(conn, node_id, title, description, connected_titles, connected_ids, workspace_id)
             else:
                 update_node(conn, node_id, title, description, connected_titles, connected_ids, workspace_id)
-        # Clean up any nodes that are no longer present via deletion, !! the bounds for this loop are prob wrong
-        while node_id < node_table_size(conn):
-            # if the node exists and is not in the new list, delete it
-            if node_exists(conn, node_id) and node_id not in [n.get("nodeID") for n in nodes]:
-                delete_node(conn, node_id)
-            node_id += 1
+
+        # Clean up: fetch all existing node rows and delete those not present in the incoming set
+        existing_rows = get_all_nodes(conn)
+        for r in existing_rows:
+            existing_id = r.get("nodeID")
+            if existing_id is None:
+                continue
+            if existing_id not in incoming_ids:
+                delete_node(conn, existing_id)
     finally:
         conn.close()  # Ensure the connection is closed after operations
+
+
+@app.get("/nodes")
+def get_nodes():
+    """Return all nodes from the database as JSON."""
+    from backend.db.db_ops import get_all_nodes
+    from backend.db.connection import get_connection_from_env
+
+    conn = get_connection_from_env()
+    try:
+        nodes = get_all_nodes(conn)
+        return {"nodes": nodes}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch nodes: {e}")
+    finally:
+        conn.close()

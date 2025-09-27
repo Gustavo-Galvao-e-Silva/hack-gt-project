@@ -194,3 +194,17 @@ def node_table_size(conn) -> int:
             return count
     finally:
         conn.close()
+
+
+def get_all_nodes(conn) -> List[Dict[str, Any]]:
+    """Return all rows from the Node table as a list of dicts.
+
+    Uses RealDictCursor so each row is a dict. Returns an empty list if no rows.
+    """
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT * FROM "Node" ORDER BY "nodeID"')
+        rows = cur.fetchall()
+        # If using RealDictCursor, rows will already be list[dict]
+        if not rows:
+            return []
+        return [row if isinstance(row, dict) else {desc[0]: row[idx] for idx, desc in enumerate(cur.description)} for idx, row in enumerate(rows)]
