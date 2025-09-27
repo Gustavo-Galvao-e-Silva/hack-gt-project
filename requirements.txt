@@ -1,3 +1,9 @@
 docling
 pydantic
+fastapi
+openai
+python-dotenv
+sentence-transformers
+scikit-learn
+numpy
 psycopg2-binary
