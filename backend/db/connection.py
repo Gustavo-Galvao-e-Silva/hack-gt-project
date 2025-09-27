@@ -34,3 +34,25 @@ def get_connection(params: Optional[Dict[str, str]] = None):
 def get_connection_from_env():
     """Convenience wrapper that always uses environment variables."""
     return get_connection(get_params_from_env())
+
+
+def disconnect(conn=None):
+    """Safely close a psycopg2 connection if provided.
+
+    Usage:
+        conn = get_connection_from_env()
+        # ... use connection ...
+        disconnect(conn)
+
+    If conn is None the function is a no-op.
+    """
+    try:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                # Silent ignore - closing a connection should be best-effort in helpers
+                pass
+    except Exception:
+        # defensive: ensure disconnect never raises
+        pass

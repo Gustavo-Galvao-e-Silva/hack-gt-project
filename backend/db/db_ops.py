@@ -139,19 +139,19 @@ def add_node(conn, node_id: int, title: str, workspace_id: int, description: Opt
         return cur.fetchone()
 
 
-def delete_node(conn, node_id: int) -> bool:
+def delete_node(conn, node_id: int, workspace_id: int) -> bool:
     """Delete a node by nodeID. Returns True if a row was deleted."""
     with conn.cursor() as cur:
-        cur.execute('DELETE FROM "Node" WHERE "nodeID" = %s', (node_id,))
+        cur.execute('DELETE FROM "Node" WHERE "nodeID" = %s and "workspaceID" = %s', (node_id, workspace_id))
         deleted = cur.rowcount
         conn.commit()
         return deleted > 0
 
 
-def get_node(conn, node_id: int) -> Optional[Dict[str, Any]]:
+def get_node(conn, node_id: int, workspace_id: int) -> Optional[Dict[str, Any]]:
     """Fetch a node by nodeID. Returns dict or None."""
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute('SELECT * FROM "Node" WHERE "nodeID" = %s', (node_id,))
+        cur.execute('SELECT * FROM "Node" WHERE "workspaceID" = %s AND "nodeID" = %s', (workspace_id, node_id))
         return _row_from_cursor(cur)
 
 
@@ -187,22 +187,19 @@ def node_exists(conn, node_id: int) -> bool:
 
 def node_table_size(conn) -> int:
     """Returns the number of rows in the Node table."""
-    try:
-        with conn.cursor() as cur:
-            cur.execute('SELECT COUNT(*) FROM "Node"')
-            count = cur.fetchone()[0]
-            return count
-    finally:
-        conn.close()
+    with conn.cursor() as cur:
+        cur.execute('SELECT COUNT(*) FROM "Node"')
+        count = cur.fetchone()[0]
+        return count
 
 
-def get_all_nodes(conn) -> List[Dict[str, Any]]:
+def get_all_nodes(conn, workspace_id: int) -> List[Dict[str, Any]]:
     """Return all rows from the Node table as a list of dicts.
 
     Uses RealDictCursor so each row is a dict. Returns an empty list if no rows.
     """
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute('SELECT * FROM "Node" ORDER BY "nodeID"')
+        cur.execute('SELECT * FROM "Node" WHERE "workspaceID" = %s ORDER BY "nodeID"', (workspace_id,))
         rows = cur.fetchall()
         # If using RealDictCursor, rows will already be list[dict]
         if not rows:

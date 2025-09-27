@@ -37,8 +37,8 @@ ALTER TABLE IF EXISTS public."Workspaces"
 ALTER TABLE IF EXISTS public."Node"
     ADD CONSTRAINT "FK_to_Workspaces" FOREIGN KEY ("workspaceID")
     REFERENCES public."Workspaces" ("workspacesID") MATCH SIMPLE
-    ON UPDATE NO ACTION
-    ON DELETE NO ACTION
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
     NOT VALID;
 
 ALTER TABLE IF EXISTS public."Workspaces"
