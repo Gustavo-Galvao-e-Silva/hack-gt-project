@@ -28,15 +28,7 @@ def load_sql(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def get_connection(params: dict):
-    conn = psycopg2.connect(
-        host=params["host"],
-        port=params["port"],
-        user=params["user"],
-        password=params["password"],
-        dbname=params["dbname"],
-    )
-    return conn
+from .connection import get_connection
 
 
 def apply_sql(conn, sql_text: str):
