@@ -24,9 +24,11 @@ ALTER TABLE IF EXISTS public."Users"
 
 CREATE TABLE public."Workspaces"
 (
-    "workspaceID" integer NOT NULL,
+    "workspacesID" integer NOT NULL,
     "userID" integer NOT NULL,
-    PRIMARY KEY ("workspaceID")
+    title text DEFAULT untitled,
+    description text,
+    PRIMARY KEY ("workspacesID")
 );
 
 ALTER TABLE IF EXISTS public."Workspaces"
