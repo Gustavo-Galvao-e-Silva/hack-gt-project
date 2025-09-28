@@ -100,6 +100,19 @@ def get_workspace(conn, workspace_id: int) -> Optional[Dict[str, Any]]:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute('SELECT * FROM "Workspaces" WHERE "workspacesID" = %s', (workspace_id,))
         return _row_from_cursor(cur)
+    
+def get_workspace_highest_id(conn) -> int:
+    """Fetch the highest workspaceID. Returns an integer."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT MAX("workspacesID") FROM "Workspaces"')
+        result = cur.fetchone()
+        return result.get("max", 0) if result else 0
+
+def get_user_workspaces(conn, user_id: int) -> List[Dict[str, Any]]:
+    """Fetch all workspaces for a user. Returns a list of dicts."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT * FROM "Workspaces" WHERE "userID" = %s', (user_id,))
+        return cur.fetchall()
 
 
 def update_workspace(conn, workspace_id: int, title: Optional[str] = None, description: Optional[str] = None) -> Optional[Dict[str, Any]]:
@@ -122,18 +135,20 @@ def update_workspace(conn, workspace_id: int, title: Optional[str] = None, descr
         return _row_from_cursor(cur)
 
 
-def add_node(conn, node_id: int, title: str, workspace_id: int, description: Optional[str] = None, connected_titles: Optional[List[str]] = None, connected_ids: Optional[List[int]] = None) -> Dict[str, Any]:
+def add_node(conn, node_id: int, title: str, workspace_id: int, description: Optional[str] = None, connected_titles: Optional[List[str]] = None, connected_ids: Optional[List[int]] = None, keywords: Optional[List[str]] = None) -> Dict[str, Any]:
     """Insert a node and return the new row.
 
     connected_titles is stored as text[] and connected_ids as integer[].
     """
     # Ensure arrays are provided as list or None
-    ct = connected_titles if connected_titles is not None else None
-    ci = connected_ids if connected_ids is not None else None
+    ct = connected_titles if connected_titles is not None else []
+    ci = connected_ids if connected_ids is not None else []
+    print(connected_titles, connected_ids)
+    kw = keywords if keywords is not None else []
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            'INSERT INTO "Node" ("nodeID", title, description, "connectedTitles", "connectedIDs", "workspaceID") VALUES (%s, %s, %s, %s, %s, %s) RETURNING *',
-            (node_id, title, description, ct, ci, workspace_id),
+            'INSERT INTO "Node" ("nodeID", title, description, "connectedTitles", "connectedIDs", "workspaceID", "keywords") VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *',
+            (node_id, title, description, ct, ci, workspace_id, kw),
         )
         conn.commit()
         return cur.fetchone()
@@ -153,9 +168,16 @@ def get_node(conn, node_id: int, workspace_id: int) -> Optional[Dict[str, Any]]:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute('SELECT * FROM "Node" WHERE "workspaceID" = %s AND "nodeID" = %s', (workspace_id, node_id))
         return _row_from_cursor(cur)
+    
+
+def get_node_by_title(conn, title: str, workspace_id: int) -> Optional[Dict[str, Any]]:
+    """Fetch a node by title. Returns dict or None."""
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute('SELECT * FROM "Node" WHERE "workspaceID" = %s AND title = %s', (workspace_id, title))
+        return _row_from_cursor(cur)
 
 
-def update_node(conn, node_id: int, title: Optional[str] = None, description: Optional[str] = None, connected_titles: Optional[List[str]] = None, connected_ids: Optional[List[int]] = None) -> Optional[Dict[str, Any]]:
+def update_node(conn, node_id: int, workspace_id: int, title: Optional[str] = None, description: Optional[str] = None, connected_titles: Optional[List[str]] = None, connected_ids: Optional[List[int]] = None, keywords: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
     """Update node fields. Returns updated row or None if not found."""
     fields = []
     values = []
@@ -171,8 +193,14 @@ def update_node(conn, node_id: int, title: Optional[str] = None, description: Op
     if connected_ids is not None:
         fields.append('"connectedIDs" = %s')
         values.append(connected_ids)
+    if workspace_id is not None:
+        fields.append('"workspaceID" = %s')
+        values.append(workspace_id)
+    if keywords is not None:
+        fields.append('"keywords" = %s')
+        values.append(keywords)
     if not fields:
-        return get_node(conn, node_id)
+        return get_node(conn, node_id, workspace_id)
     values.append(node_id)
     query = f'UPDATE "Node" SET {", ".join(fields)} WHERE "nodeID" = %s RETURNING *'
     with conn.cursor(cursor_factory=RealDictCursor) as cur:

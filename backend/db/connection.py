@@ -28,6 +28,7 @@ def get_connection(params: Optional[Dict[str, str]] = None):
     If params is None, build params from environment variables.
     """
     actual_params = params if params is not None else get_params_from_env()
+    print(actual_params)
     return psycopg2.connect(**actual_params)
 
 
