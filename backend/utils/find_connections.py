@@ -19,15 +19,17 @@ def _get_similarity(node_list: list[dict[str, Any]], mode: str = "title") -> np.
         titles = model.encode([node["title"] for node in node_list])
         descs = model.encode([node.get("description", "") for node in node_list])
 
-        # normalize similarities
         sim_titles = cosine_similarity(titles)
         sim_descs = cosine_similarity(descs)
 
-        # weighted sum (you can tweak weights)
         return 0.6 * sim_titles + 0.4 * sim_descs
 
     else:
         raise ValueError("mode must be 'title', 'description', or 'hybrid'")
+
+
+def _nodes_share_keyword(node_1: dict, node_2: dict) -> bool:
+    return len(set(node_1["keywords"]).intersection(set(node_2["keywords"]))) > 0
 
 
 def find_connected_nodes(
@@ -45,7 +47,7 @@ def find_connected_nodes(
     for i in range(n):
         for j in range(i + 1, n):
             similarity_score = similarity_matrix[i][j]
-            if min_similarity <= similarity_score <= max_similarity:
+            if min_similarity <= similarity_score <= max_similarity  or _nodes_share_keyword(node_list[i], node_list[j]):
                 node_list[i]["connected_titles"].append({
                     "title": node_list[j]["title"],
                     "similarity": float(similarity_score)
