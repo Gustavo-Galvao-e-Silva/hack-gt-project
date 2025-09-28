@@ -6,6 +6,7 @@ CREATE TABLE public."Node"
     description text,
     "connectedIDs" integer[],
     "workspaceID" integer NOT NULL,
+    "keywords" text[],
     PRIMARY KEY ("nodeID")
 );
 

@@ -8,6 +8,7 @@ from backend.schemas.response_schema import ConceptNodeList
 client = OpenAI(api_key=OPEN_AI_KEY)
 
 def extract_completion(system_prompt, user_prompt: str) -> dict:
+    print("Extracting completion from OpenAI...")
     response = client.chat.completions.create(
         model=OPEN_AI_MODEL,
         messages=[
@@ -24,4 +25,5 @@ def extract_completion(system_prompt, user_prompt: str) -> dict:
     )
 
     content = response.choices[0].message.content
+    print("OpenAI response content:", content)
     return json.loads(content)
