@@ -3,14 +3,18 @@ from io import BytesIO
 
 from backend.utils.preprocessing import convert_file_to_md
 from backend.utils.models import extract_completion
-from backend.utils.embedding import find_connected_nodes
+from backend.utils.find_connections import find_connected_nodes
 from backend.prompts.prompt_building import extract_information_prompts
+
+from backend.db.db_ops import add_node, update_node, get_node, delete_node, get_all_nodes
+from backend.db.connection import get_connection_from_env
 
 
 app = FastAPI()
 
-@app.post("/documents/extract_nodes")
-async def extract_nodes(file: UploadFile = File(...), workspace_id: int = Form(...)):
+
+@app.post("/graphs/upload_nodes")
+async def upload_nodes(file: UploadFile = File(...)):
     try:
         content = await file.read()
         if not content:
@@ -19,24 +23,23 @@ async def extract_nodes(file: UploadFile = File(...), workspace_id: int = Form(.
         markdown = convert_file_to_md(BytesIO(content))
         system_prompt, user_prompt = extract_information_prompts(markdown)
         nodes = extract_completion(system_prompt, user_prompt)["nodes"]
-        connected_nodes = find_connected_nodes(nodes, 0.5, 0.9, "hybrid")
+        connected_nodes = find_connected_nodes(nodes, 0.45, 0.95, "hybrid") # TODO: look into tweaking the threshold
 
-        # the upload to the DB
         upload_nodes_db(connected_nodes, workspace_id)
 
         return  connected_nodes# TODO: Upload this to the DB and improve prompt to speed up graph generation
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong {e}")
+
+
     
 '''This function uploads the nodes to the database, checks if they're already there, and deletes nodes which are no longer in use.'''
 # warning !! the code assumes that if you generate a new set of nodes, the id's still stay the same on the front end when parsing to the backend
 def upload_nodes_db(nodes, workspace_id: int):
     """Uploads most recent nodes to the database."""
-    from backend.db.db_ops import add_node, update_node, get_node, delete_node, get_all_nodes
-    from backend.db.connection import get_connection_from_env
-    conn = get_connection_from_env()  # retrieves a DB connection
     try:
+        conn = get_connection_from_env()  # retrieves a DB connection
         # Build a set of incoming node IDs for quick membership checks
         incoming_ids = set()
         for node in nodes:
@@ -74,8 +77,7 @@ def upload_nodes_db(nodes, workspace_id: int):
 @app.get("/nodes/{workspace_id}")
 def get_nodes(workspace_id: int):
     """Return all nodes from the database as JSON."""
-    from backend.db.db_ops import get_all_nodes
-    from backend.db.connection import get_connection_from_env
+    
 
     conn = get_connection_from_env()
     try:
