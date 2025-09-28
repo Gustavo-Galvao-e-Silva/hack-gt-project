@@ -161,16 +161,27 @@ def upload_nodes_db(nodes, workspace_id: int):
     finally:
         conn.close()  # Ensure the connection is closed after operations
 
+
+def build_undirected_edges(nodes):
+    edges = set()
+    for n in nodes:
+        for cid in n.get("connectedTitles", []):
+            edges.add(tuple(sorted([n["title"], cid])))
+
+    return [{"from": e[0], "to": e[1]} for e in edges]
+
+
 '''This function retrieves all nodes from the database and returns them as JSON.'''
 @app.get("/nodes/{workspace_id}")
 def get_nodes(workspace_id: int):
     """Return all nodes from the database as JSON."""
-    
-
     conn = get_connection_from_env()
     try:
         nodes = get_all_nodes(conn, workspace_id)
-        return {"nodes": nodes}
+        for n in nodes:
+            n["id"] = n["title"]
+        return {"nodes": nodes,
+                "edges": build_undirected_edges(nodes)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch nodes: {e}")
     finally:
@@ -205,3 +216,53 @@ def generate_workspace_hash(workspace_id, title):
         return int(number_str[:8])
     else:
         return numeric_hash
+    
+    # 
+@app.post("/workspaces/upload")
+async def upload_file_to_workspace(
+    file: UploadFile = File(...),
+    user_id: int = Form(...),
+    workspace_title: str = Form(...),
+    description: str = Form(None)
+):
+    """
+    Upload a file, create a workspace if it doesn't exist, 
+    and insert the nodes into that workspace.
+    """
+    conn = get_connection_from_env()
+    try:
+        # 1. Check if workspace already exists for this user
+        workspaces = get_user_workspaces(conn, user_id)
+        existing_ws = next((ws for ws in workspaces if ws["title"] == workspace_title), None)
+
+        if existing_ws:
+            workspace_id = existing_ws["workspace_id"]
+        else:
+            # create new workspace
+            workspace_id = get_workspace_highest_id(conn) + 1
+            add_workspace(conn, workspace_id, user_id, workspace_title, description)
+
+        # 2. Read file content
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="File required")
+
+        # 3. Process file into nodes
+        markdown = convert_file_to_md(BytesIO(content))
+        system_prompt, user_prompt = extract_information_prompts(markdown)
+        nodes = extract_completion(system_prompt, user_prompt)["nodes"]
+        connected_nodes = find_connected_nodes(nodes, 0.45, 0.95, "hybrid")
+
+        # 4. Store nodes in DB under this workspace
+        upload_nodes_db(connected_nodes, workspace_id)
+
+        return {
+            "workspace_id": workspace_id,
+            "title": workspace_title,
+            "nodes_uploaded": len(connected_nodes)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
+    finally:
+        conn.close()
